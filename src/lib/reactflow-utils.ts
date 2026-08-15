@@ -35,7 +35,7 @@ export function generateReactFlowGraph(
       data: {
         person: n.person,
         isSpouse: false,
-        hasChildren: n.children.length > 0,
+        hasChildren: n.children.length > 0, // based on actual db children count
         isExpanded: expandedNodes.has(n.id)
       }
     });

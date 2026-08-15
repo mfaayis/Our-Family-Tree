@@ -105,13 +105,23 @@ function FlowCanvas() {
   const handleViewAncestors = useCallback((id: string) => {
     const highest = findHighestAncestor(id, relationships);
     setFocusBranchId(highest);
-    // Open path to the person
     setExpandedNodes(prev => new Set(prev).add(highest).add(id));
   }, [relationships]);
 
   const handleViewDescendants = useCallback((id: string) => {
     setFocusBranchId(id);
     setExpandedNodes(prev => new Set(prev).add(id));
+  }, []);
+
+  const openAddDialog = useCallback((type: 'child' | 'parent' | 'sibling' | 'spouse', person: Person) => {
+    setAddTarget(person);
+    setAddRelType(type);
+    setAddDialogOpen(true);
+  }, []);
+
+  const openEditDialog = useCallback((person: Person) => {
+    setEditTarget(person);
+    setEditDialogOpen(true);
   }, []);
 
   // Generate Graph Data
@@ -132,14 +142,19 @@ function FlowCanvas() {
         data: {
           ...n.data,
           onToggleExpand: handleToggleExpand,
-          onSelectPerson: handleSelectPerson
+          onSelectPerson: handleSelectPerson,
+          onAddChild: (p: Person) => openAddDialog('child', p),
+          onAddSpouse: (p: Person) => openAddDialog('spouse', p),
+          onAddSibling: (p: Person) => openAddDialog('sibling', p),
+          onAddParent: (p: Person) => openAddDialog('parent', p),
+          onEdit: openEditDialog,
         }
       }));
       
       return { nodes: interactiveNodes, edges: graph.edges };
     }
     return { nodes: [], edges: [] };
-  }, [rootPersonId, focusBranchId, peopleMap, relationships, expandedNodes, handleToggleExpand, handleSelectPerson]);
+  }, [rootPersonId, focusBranchId, peopleMap, relationships, expandedNodes, handleToggleExpand, handleSelectPerson, openAddDialog, openEditDialog]);
 
   // Center on focus Branch
   useEffect(() => {
@@ -258,11 +273,7 @@ function FlowCanvas() {
         onViewBranch={handleViewBranch}
         onViewAncestors={handleViewAncestors}
         onViewDescendants={handleViewDescendants}
-        onAddRelative={(type, target) => {
-          setAddTarget(target);
-          setAddRelType(type);
-          setAddDialogOpen(true);
-        }}
+        onAddRelative={(type, target) => openAddDialog(type, target)}
         onOpenProfile={(id) => window.open(`/people/${id}`, '_blank')}
       />
 

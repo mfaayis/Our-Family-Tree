@@ -1,7 +1,18 @@
-import { BaseEdge, EdgeProps, getSmoothStepPath, getStraightPath } from 'reactflow';
+import { BaseEdge, EdgeProps, getSmoothStepPath, getStraightPath, EdgeLabelRenderer } from 'reactflow';
 
-// Elegant dark-brown/charcoal connecting lines
-const strokeStyle = { stroke: '#5c4033', strokeWidth: 3, strokeLinecap: 'round' as const };
+// Warm charcoal/brown family tree branch lines
+const childStyle = {
+  stroke: '#5c4033',
+  strokeWidth: 3,
+  strokeLinecap: 'round' as const,
+};
+
+const spouseStyle = {
+  stroke: '#8b5a2b',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeDasharray: '6 4',
+};
 
 export function CustomChildEdge({
   id,
@@ -14,7 +25,6 @@ export function CustomChildEdge({
   style = {},
   markerEnd,
 }: EdgeProps) {
-  // Use SmoothStepPath for the T-junction look (parent -> branch -> child)
   const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -22,7 +32,7 @@ export function CustomChildEdge({
     targetY,
     sourcePosition,
     targetPosition,
-    borderRadius: 16, // Smooth curves for branching
+    borderRadius: 20,
   });
 
   return (
@@ -30,7 +40,7 @@ export function CustomChildEdge({
       id={id}
       path={edgePath}
       markerEnd={markerEnd}
-      style={{ ...strokeStyle, ...style }}
+      style={{ ...childStyle, ...style }}
     />
   );
 }
@@ -44,7 +54,8 @@ export function CustomSpouseEdge({
   style = {},
   markerEnd,
 }: EdgeProps) {
-  // Spouses just use a simple straight horizontal line
+  const midY = (sourceY + targetY) / 2;
+  // Spouse line: straight horizontal with a slight heart-shaped midpoint
   const [edgePath] = getStraightPath({
     sourceX,
     sourceY,
@@ -57,7 +68,7 @@ export function CustomSpouseEdge({
       id={id}
       path={edgePath}
       markerEnd={markerEnd}
-      style={{ ...strokeStyle, strokeDasharray: '4 4', strokeWidth: 2, ...style }} // Subtle dashed line for spouses
+      style={{ ...spouseStyle, ...style }}
     />
   );
 }

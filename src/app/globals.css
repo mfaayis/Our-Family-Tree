@@ -84,4 +84,52 @@
   .tree-canvas:active {
     cursor: grabbing;
   }
+
+  /* ── React Flow overrides — premium parchment look ── */
+  .react-flow__renderer {
+    background: transparent;
+  }
+
+  /* Remove default blue selection border */
+  .react-flow__node.selected > * {
+    box-shadow: 0 0 0 2px #8b5a2b !important;
+  }
+
+  /* Remove ugly default edge handles */
+  .react-flow__handle {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 4px !important;
+    height: 4px !important;
+    min-width: 4px !important;
+    min-height: 4px !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* Smooth edge rendering */
+  .react-flow__edge path {
+    transition: stroke 0.3s ease;
+  }
+
+  /* Minimap styling */
+  .react-flow__minimap {
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  /* Parchment background for React Flow canvas */
+  .react-flow__background {
+    background-color: #f4ebd8 !important;
+  }
+
+  /* Remove the default toolbar attribution */
+  .react-flow__attribution {
+    display: none !important;
+  }
+
+  /* Node hover — bring forward */
+  .react-flow__node:hover {
+    z-index: 1000 !important;
+  }
 }
