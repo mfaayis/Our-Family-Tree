@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PersonCard } from '@/components/people/PersonCard';
 import { AddRelativeDialog } from '@/components/people/AddRelativeDialog';
+import { EditPersonDialog } from '@/components/people/EditPersonDialog';
 import type { Person, Relationship } from '@/lib/types';
 import {
   ZoomIn,
@@ -109,8 +110,15 @@ export function FamilyTreePage() {
   const [branch, setBranch] = useState('all');
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  
+  // Dialog States
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addTarget, setAddTarget] = useState<Person | null>(null);
+  const [addRelType, setAddRelType] = useState<'child' | 'spouse'>('child');
+  
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Person | null>(null);
+
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -267,7 +275,7 @@ export function FamilyTreePage() {
               <button
                 key={node.id}
                 onClick={() => router.push(`/people/${node.id}`)}
-                className="w-full flex items-center gap-3 p-3 bg-white rounded-xl border border-stone-200 hover:border-amber-200 transition-all text-left"
+                className="w-full flex items-center gap-3 p-3 bg-white/60 backdrop-blur-md rounded-xl border border-stone-200 hover:border-amber-200 transition-all text-left shadow-sm"
               >
                 <div className={cn(
                   'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0',
@@ -294,11 +302,11 @@ export function FamilyTreePage() {
 
   // Desktop: Canvas tree
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col">
+    <div className="min-h-screen bg-[#f9faf5] flex flex-col">
       <Navbar />
       <div className="pt-16 flex-1 flex flex-col">
         {/* Toolbar */}
-        <div className="bg-white border-b border-stone-200 px-4 py-2 flex items-center gap-3 flex-wrap">
+        <div className="bg-white/80 backdrop-blur-md border-b border-stone-200 px-4 py-2 flex items-center gap-3 flex-wrap shadow-sm z-10 relative">
           <h1 className="font-bold text-stone-800 text-sm">Family Tree</h1>
 
           {/* Branch filter */}
@@ -309,7 +317,7 @@ export function FamilyTreePage() {
                 onClick={() => setBranch(b.id)}
                 className={cn(
                   'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
-                  branch === b.id ? 'bg-amber-700 text-white border-amber-700' : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100'
+                  branch === b.id ? 'bg-amber-700 text-white border-amber-700 shadow-sm' : 'bg-white/50 text-stone-600 border-stone-200 hover:bg-stone-100'
                 )}
               >
                 {b.label}
@@ -320,14 +328,16 @@ export function FamilyTreePage() {
           <div className="ml-auto flex items-center gap-2">
             {/* Search */}
             {showSearch ? (
-              <Input
-                autoFocus
-                placeholder="Search person..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                onBlur={() => { if (!search) setShowSearch(false); }}
-                className="h-8 w-40 text-xs"
-              />
+              <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 160, opacity: 1 }}>
+                <Input
+                  autoFocus
+                  placeholder="Search person..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  onBlur={() => { if (!search) setShowSearch(false); }}
+                  className="h-8 w-full text-xs"
+                />
+              </motion.div>
             ) : (
               <Button size="icon" variant="ghost" onClick={() => setShowSearch(true)} title="Search">
                 <Search className="w-4 h-4" />
@@ -338,7 +348,7 @@ export function FamilyTreePage() {
             <Button size="icon" variant="ghost" onClick={() => setScale(s => Math.min(s + 0.1, 2))} title="Zoom in">
               <ZoomIn className="w-4 h-4" />
             </Button>
-            <span className="text-xs text-stone-400 w-10 text-center">{Math.round(scale * 100)}%</span>
+            <span className="text-xs font-medium text-stone-500 w-10 text-center">{Math.round(scale * 100)}%</span>
             <Button size="icon" variant="ghost" onClick={() => setScale(s => Math.max(s - 0.1, 0.2))} title="Zoom out">
               <ZoomOut className="w-4 h-4" />
             </Button>
@@ -348,10 +358,13 @@ export function FamilyTreePage() {
           </div>
         </div>
 
-        {/* Canvas */}
+        {/* Canvas Area */}
         <div
           ref={containerRef}
-          className="flex-1 overflow-hidden tree-canvas select-none relative bg-stone-50"
+          className={cn(
+            "flex-1 overflow-hidden tree-canvas select-none relative",
+            isPanning ? "cursor-grabbing" : "cursor-grab"
+          )}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
@@ -360,14 +373,16 @@ export function FamilyTreePage() {
           onTouchMove={onTouchMove}
           onTouchEnd={() => { lastTouch.current = null; }}
         >
-          {/* Background grid */}
+          {/* Aesthetic Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#f2f6e9] via-[#fbfdf7] to-[#e8efe0] pointer-events-none" />
+          
           <svg
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none opacity-[0.03]"
             width="100%" height="100%"
           >
             <defs>
               <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e7e5e4" strokeWidth="0.5" />
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#000" strokeWidth="1" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid)" />
@@ -380,6 +395,7 @@ export function FamilyTreePage() {
               position: 'absolute',
               top: 0,
               left: 0,
+              willChange: 'transform',
             }}
           >
             {/* SVG edges */}
@@ -387,6 +403,12 @@ export function FamilyTreePage() {
               style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
               width={svgW} height={svgH}
             >
+              <defs>
+                <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#d1d5db" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#9ca3af" stopOpacity="0.4" />
+                </linearGradient>
+              </defs>
               <AnimatePresence>
                 {edges.map((e, i) => {
                   const x1 = e.x1 - minX + 60;
@@ -394,17 +416,21 @@ export function FamilyTreePage() {
                   const x2 = e.x2 - minX + 60;
                   const y2 = e.y2 - minY + 60;
                   const midY = (y1 + y2) / 2;
+                  
+                  // Smooth Bezier Curve
+                  const d = `M ${x1} ${y1} C ${x1} ${midY + 20}, ${x2} ${midY - 20}, ${x2} ${y2}`;
+                  
                   return (
                     <motion.path
                       key={`${e.x1}-${e.y1}-${e.x2}-${e.y2}-${i}`}
                       initial={{ pathLength: 0, opacity: 0 }}
                       animate={{ pathLength: 1, opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                      transition={{ duration: 1.2, ease: "easeOut" }}
+                      d={d}
                       fill="none"
-                      stroke="#d6d3d1"
-                      strokeWidth="2"
+                      stroke="url(#line-gradient)"
+                      strokeWidth="2.5"
                       strokeLinecap="round"
                     />
                   );
@@ -417,8 +443,8 @@ export function FamilyTreePage() {
               {nodes.map(node => (
                 <motion.div
                   key={node.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.8, y: node.y - minY + 80 }}
+                  // Removed 'layout' to fix panning jitter!
+                  initial={{ opacity: 0, scale: 0.8, x: node.x - minX + 60 - CARD_W / 2, y: node.y - minY + 80 }}
                   animate={{ 
                     opacity: 1, 
                     scale: 1, 
@@ -443,10 +469,20 @@ export function FamilyTreePage() {
                   <PersonCard
                     person={node.person}
                     childCount={node.children.length}
-                    showAddChild={canEdit}
+                    showQuickActions={canEdit}
                     onAddChild={() => {
                       setAddTarget(node.person);
+                      setAddRelType('child');
                       setAddDialogOpen(true);
+                    }}
+                    onAddSpouse={() => {
+                      setAddTarget(node.person);
+                      setAddRelType('spouse');
+                      setAddDialogOpen(true);
+                    }}
+                    onEdit={() => {
+                      setEditTarget(node.person);
+                      setEditDialogOpen(true);
                     }}
                   />
                 </motion.div>
@@ -455,8 +491,8 @@ export function FamilyTreePage() {
           </div>
 
           {/* Member count badge */}
-          <div className="absolute bottom-4 left-4 bg-white rounded-xl border border-stone-200 px-3 py-2 shadow-sm">
-            <p className="text-xs text-stone-500">{nodes.length} members shown</p>
+          <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-md rounded-xl border border-stone-200/60 px-3 py-2 shadow-sm">
+            <p className="text-xs font-medium text-stone-500">{nodes.length} members shown</p>
           </div>
         </div>
       </div>
@@ -466,7 +502,15 @@ export function FamilyTreePage() {
           open={addDialogOpen}
           onClose={() => { setAddDialogOpen(false); setAddTarget(null); }}
           relativeTo={addTarget}
-          relationshipType="child"
+          relationshipType={addRelType}
+        />
+      )}
+
+      {editDialogOpen && editTarget && (
+        <EditPersonDialog
+          open={editDialogOpen}
+          onClose={() => { setEditDialogOpen(false); setEditTarget(null); }}
+          person={editTarget}
         />
       )}
     </div>
