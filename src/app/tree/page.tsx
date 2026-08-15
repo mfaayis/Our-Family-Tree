@@ -7,8 +7,6 @@ export const metadata = {
 
 export default function TreePage() {
   return (
-    <ProtectedRoute>
-      <FamilyTreePage />
-    </ProtectedRoute>
+    <FamilyTreePage />
   );
 }

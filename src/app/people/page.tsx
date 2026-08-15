@@ -1,4 +1,3 @@
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PeopleListPage } from '@/components/people/PeopleListPage';
 
 export const metadata = {
@@ -7,8 +6,6 @@ export const metadata = {
 
 export default function PeoplePage() {
   return (
-    <ProtectedRoute>
-      <PeopleListPage />
-    </ProtectedRoute>
+    <PeopleListPage />
   );
 }

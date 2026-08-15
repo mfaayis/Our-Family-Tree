@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = userProfile?.role === 'ADMIN';
   const isFamilyMember = userProfile?.role === 'FAMILY_MEMBER' || isAdmin;
-  const canEdit = !!user;
+  const canEdit = isAdmin;
 
   return (
     <AuthContext.Provider

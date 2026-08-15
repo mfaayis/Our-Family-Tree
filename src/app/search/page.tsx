@@ -1,14 +1,11 @@
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { SearchPage } from '@/components/search/SearchPage';
+import { SearchPage as SearchPageComponent } from '@/components/search/SearchPage';
 
 export const metadata = {
   title: 'Search — Kassim Pillai Family',
 };
 
-export default function Search() {
+export default function SearchPage() {
   return (
-    <ProtectedRoute>
-      <SearchPage />
-    </ProtectedRoute>
+    <SearchPageComponent />
   );
 }
