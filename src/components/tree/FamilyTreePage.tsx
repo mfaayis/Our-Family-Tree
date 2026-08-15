@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useFamilyTree } from '@/contexts/FamilyTreeContext';
@@ -151,19 +151,31 @@ export function FamilyTreePage() {
     return branch;
   }, [branch, rootPersonId]);
 
-  const root = rootPersonId ? buildTree(effectiveRoot() || rootPersonId, peopleMap, relationships) : null;
-  if (root) assignPositions(root, 0, 0);
+  // Memoize all heavy tree calculations!
+  const { root, nodes, edges, minX, maxX, minY, maxY, svgW, svgH } = useMemo(() => {
+    const rootNode = rootPersonId ? buildTree(effectiveRoot() || rootPersonId, peopleMap, relationships) : null;
+    if (rootNode) assignPositions(rootNode, 0, 0);
 
-  const nodes = root ? collectNodes(root) : [];
-  const edges = root ? collectEdges(root) : [];
+    const nodesList = rootNode ? collectNodes(rootNode) : [];
+    const edgesList = rootNode ? collectEdges(rootNode) : [];
 
-  // Bounds
-  const minX = nodes.length ? Math.min(...nodes.map(n => n.x - CARD_W / 2)) : 0;
-  const maxX = nodes.length ? Math.max(...nodes.map(n => n.x + CARD_W / 2)) : 800;
-  const minY = nodes.length ? Math.min(...nodes.map(n => n.y)) : 0;
-  const maxY = nodes.length ? Math.max(...nodes.map(n => n.y + CARD_H)) : 600;
-  const svgW = maxX - minX + 120;
-  const svgH = maxY - minY + 120;
+    const minXVal = nodesList.length ? Math.min(...nodesList.map(n => n.x - CARD_W / 2)) : 0;
+    const maxXVal = nodesList.length ? Math.max(...nodesList.map(n => n.x + CARD_W / 2)) : 800;
+    const minYVal = nodesList.length ? Math.min(...nodesList.map(n => n.y)) : 0;
+    const maxYVal = nodesList.length ? Math.max(...nodesList.map(n => n.y + CARD_H)) : 600;
+
+    return {
+      root: rootNode,
+      nodes: nodesList,
+      edges: edgesList,
+      minX: minXVal,
+      maxX: maxXVal,
+      minY: minYVal,
+      maxY: maxYVal,
+      svgW: maxXVal - minXVal + 120,
+      svgH: maxYVal - minYVal + 120,
+    };
+  }, [effectiveRoot, rootPersonId, peopleMap, relationships]);
 
   // Focus on person from URL
   const focusId = searchParams.get('focus');
