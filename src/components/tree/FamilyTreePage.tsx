@@ -1,16 +1,33 @@
 'use client';
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import ReactFlow, { 
+  Background, 
+  MiniMap, 
+  Panel,
+  ReactFlowProvider,
+  useReactFlow,
+  Node,
+  Edge
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
 import { useFamilyTree } from '@/contexts/FamilyTreeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PersonCard } from '@/components/people/PersonCard';
 import { AddRelativeDialog } from '@/components/people/AddRelativeDialog';
 import { EditPersonDialog } from '@/components/people/EditPersonDialog';
-import type { Person, Relationship } from '@/lib/types';
+import { ProfileSidePanel } from '@/components/tree/ProfileSidePanel';
+
+import PersonNode from '@/components/people/PersonNode';
+import { CustomChildEdge, CustomSpouseEdge } from '@/components/tree/CustomEdges';
+import { generateReactFlowGraph, findHighestAncestor } from '@/lib/reactflow-utils';
+import { buildTreeFromRoot, assignTreePositions } from '@/lib/tree-utils';
+import type { Person } from '@/lib/types';
 import {
   ZoomIn,
   ZoomOut,
@@ -18,97 +35,20 @@ import {
   Search,
   Loader2,
   AlertTriangle,
-  Users,
+  Maximize
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
-const CARD_W = 160;
-const CARD_H = 95;
-const H_GAP = 60;
-const V_GAP = 100;
+const nodeTypes = { personNode: PersonNode };
+const edgeTypes = { customChildEdge: CustomChildEdge, customSpouseEdge: CustomSpouseEdge };
 
-interface TreeNodeData {
-  id: string;
-  person: Person;
-  children: TreeNodeData[];
-  spouses: Person[];
-  generation: number;
-  x: number;
-  y: number;
-}
-
-interface Pos { x: number; y: number; }
-
-function buildTree(
-  rootId: string,
-  people: Map<string, Person>,
-  rels: Relationship[]
-): TreeNodeData | null {
-  const visited = new Set<string>();
-  function build(id: string, gen: number): TreeNodeData | null {
-    if (visited.has(id)) return null;
-    visited.add(id);
-    const person = people.get(id);
-    if (!person || person.isDeleted) return null;
-    const childIds = rels
-      .filter(r => r.relationshipType === 'parent' && r.personA === id)
-      .map(r => r.personB);
-    const spouseIds = rels
-      .filter(r => r.relationshipType === 'spouse' && (r.personA === id || r.personB === id))
-      .map(r => r.personA === id ? r.personB : r.personA);
-    const children = childIds.map(c => build(c, gen + 1)).filter((n): n is TreeNodeData => n !== null);
-    const spouses = spouseIds.map(s => people.get(s)).filter((p): p is Person => !!p);
-    return { id, person, children, spouses, generation: gen, x: 0, y: 0 };
-  }
-  return build(rootId, 0);
-}
-
-function getSubtreeW(node: TreeNodeData): number {
-  if (node.children.length === 0) return CARD_W;
-  const childrenW = node.children.reduce((sum, c) => sum + getSubtreeW(c) + H_GAP, -H_GAP);
-  return Math.max(CARD_W, childrenW);
-}
-
-function assignPositions(node: TreeNodeData, x: number, y: number): void {
-  node.y = y;
-  if (node.children.length === 0) { node.x = x; return; }
-  let cx = x - getSubtreeW(node) / 2;
-  for (const child of node.children) {
-    const cw = getSubtreeW(child);
-    assignPositions(child, cx + cw / 2, y + CARD_H + V_GAP);
-    cx += cw + H_GAP;
-  }
-  const first = node.children[0];
-  const last = node.children[node.children.length - 1];
-  node.x = (first.x + last.x) / 2;
-}
-
-function collectNodes(node: TreeNodeData, out: TreeNodeData[] = []): TreeNodeData[] {
-  out.push(node);
-  for (const c of node.children) collectNodes(c, out);
-  return out;
-}
-
-function collectEdges(node: TreeNodeData, out: { x1: number; y1: number; x2: number; y2: number }[] = []) {
-  for (const c of node.children) {
-    out.push({ x1: node.x, y1: node.y + CARD_H, x2: c.x, y2: c.y });
-    collectEdges(c, out);
-  }
-  return out;
-}
-
-export function FamilyTreePage() {
+function FlowCanvas() {
   const { people, relationships, rootPersonId, loading, error } = useFamilyTree();
   const { canEdit } = useAuth();
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const { setCenter, fitView, zoomIn, zoomOut } = useReactFlow();
 
-  const [scale, setScale] = useState(0.8);
-  const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [lastMouse, setLastMouse] = useState<Pos>({ x: 0, y: 0 });
-  const [branch, setBranch] = useState('all');
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   
@@ -120,226 +60,172 @@ export function FamilyTreePage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Person | null>(null);
 
-  const [isMobile, setIsMobile] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [focusBranchId, setFocusBranchId] = useState<string | null>(null);
 
+  const peopleMap = useMemo(() => new Map(people.map(p => [p.id, p])), [people]);
+
+  // Initial root
   useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    if (rootPersonId && expandedNodes.size === 0) {
+      // Expand root by default
+      setExpandedNodes(new Set([rootPersonId]));
+    }
+  }, [rootPersonId]); // eslint-disable-line
+
+  // Handle URL focus
+  useEffect(() => {
+    const focusId = searchParams.get('focus');
+    if (focusId && peopleMap.has(focusId)) {
+      setFocusBranchId(focusId);
+      setExpandedNodes(prev => new Set(prev).add(focusId));
+    }
+  }, [searchParams, peopleMap]);
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
 
-  const peopleMap = new Map(people.map(p => [p.id, p]));
+  const handleSelectPerson = useCallback((person: Person) => {
+    setSelectedPerson(person);
+  }, []);
 
-  // Dynamically create branches based on the children of the root person
-  const branches = [{ id: 'all', label: 'Entire Family' }];
-  if (rootPersonId && peopleMap.has(rootPersonId)) {
-      const rootChildren = relationships
-          .filter(r => r.relationshipType === 'parent' && r.personA === rootPersonId)
-          .map(r => peopleMap.get(r.personB))
-          .filter((p): p is Person => !!p);
+  const handleViewBranch = useCallback((id: string) => {
+    setFocusBranchId(id);
+    setExpandedNodes(prev => new Set(prev).add(id));
+  }, []);
+
+  const handleViewAncestors = useCallback((id: string) => {
+    const highest = findHighestAncestor(id, relationships);
+    setFocusBranchId(highest);
+    // Open path to the person
+    setExpandedNodes(prev => new Set(prev).add(highest).add(id));
+  }, [relationships]);
+
+  const handleViewDescendants = useCallback((id: string) => {
+    setFocusBranchId(id);
+    setExpandedNodes(prev => new Set(prev).add(id));
+  }, []);
+
+  // Generate Graph Data
+  const { nodes, edges } = useMemo(() => {
+    if (!rootPersonId) return { nodes: [], edges: [] };
+    
+    // Find the highest ancestor if we don't have a specific branch focus
+    const actualRoot = focusBranchId || findHighestAncestor(rootPersonId, relationships);
+    
+    const tree = buildTreeFromRoot(actualRoot, peopleMap, relationships, 20);
+    if (tree) {
+      assignTreePositions(tree, 180, 110, 60, 100);
+      const graph = generateReactFlowGraph(tree, expandedNodes);
       
-      rootChildren.forEach(child => {
-          branches.push({ id: child.id, label: child.fullName.split(' ')[0] });
-      });
-  }
+      // Inject callbacks into nodes
+      const interactiveNodes = graph.nodes.map(n => ({
+        ...n,
+        data: {
+          ...n.data,
+          onToggleExpand: handleToggleExpand,
+          onSelectPerson: handleSelectPerson
+        }
+      }));
+      
+      return { nodes: interactiveNodes, edges: graph.edges };
+    }
+    return { nodes: [], edges: [] };
+  }, [rootPersonId, focusBranchId, peopleMap, relationships, expandedNodes, handleToggleExpand, handleSelectPerson]);
 
-  // Determine root for current branch filter
-  const effectiveRoot = useCallback(() => {
-    if (branch === 'all' || !rootPersonId) return rootPersonId;
-    return branch;
-  }, [branch, rootPersonId]);
-
-  // Memoize all heavy tree calculations!
-  const { root, nodes, edges, minX, maxX, minY, maxY, svgW, svgH } = useMemo(() => {
-    const rootNode = rootPersonId ? buildTree(effectiveRoot() || rootPersonId, peopleMap, relationships) : null;
-    if (rootNode) assignPositions(rootNode, 0, 0);
-
-    const nodesList = rootNode ? collectNodes(rootNode) : [];
-    const edgesList = rootNode ? collectEdges(rootNode) : [];
-
-    const minXVal = nodesList.length ? Math.min(...nodesList.map(n => n.x - CARD_W / 2)) : 0;
-    const maxXVal = nodesList.length ? Math.max(...nodesList.map(n => n.x + CARD_W / 2)) : 800;
-    const minYVal = nodesList.length ? Math.min(...nodesList.map(n => n.y)) : 0;
-    const maxYVal = nodesList.length ? Math.max(...nodesList.map(n => n.y + CARD_H)) : 600;
-
-    return {
-      root: rootNode,
-      nodes: nodesList,
-      edges: edgesList,
-      minX: minXVal,
-      maxX: maxXVal,
-      minY: minYVal,
-      maxY: maxYVal,
-      svgW: maxXVal - minXVal + 120,
-      svgH: maxYVal - minYVal + 120,
-    };
-  }, [effectiveRoot, rootPersonId, peopleMap, relationships]);
-
-  // Focus on person from URL
-  const focusId = searchParams.get('focus');
+  // Center on focus Branch
   useEffect(() => {
-    if (focusId) {
-      const node = nodes.find(n => n.id === focusId);
-      if (node && containerRef.current) {
-        const cw = containerRef.current.clientWidth;
-        const ch = containerRef.current.clientHeight;
-        setPan({
-          x: cw / 2 - (node.x - minX + 60) * scale,
-          y: ch / 2 - (node.y - minY + 60) * scale,
-        });
+    if (focusBranchId && nodes.length > 0) {
+      const targetNode = nodes.find(n => n.id === focusBranchId);
+      if (targetNode) {
+        setTimeout(() => setCenter(targetNode.position.x, targetNode.position.y, { zoom: 1, duration: 800 }), 100);
       }
     }
-  }, [focusId, nodes.length, scale, minX, minY]);
+  }, [focusBranchId, nodes]); // eslint-disable-line
 
-  // Pan handlers
-  function onMouseDown(e: React.MouseEvent) {
-    setIsPanning(true);
-    setLastMouse({ x: e.clientX, y: e.clientY });
-  }
-  function onMouseMove(e: React.MouseEvent) {
-    if (!isPanning) return;
-    setPan(p => ({ x: p.x + e.clientX - lastMouse.x, y: p.y + e.clientY - lastMouse.y }));
-    setLastMouse({ x: e.clientX, y: e.clientY });
-  }
-  function onMouseUp() { setIsPanning(false); }
-
-  // Touch pan
-  const lastTouch = useRef<Pos | null>(null);
-  function onTouchStart(e: React.TouchEvent) {
-    lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-  function onTouchMove(e: React.TouchEvent) {
-    if (!lastTouch.current) return;
-    const dx = e.touches[0].clientX - lastTouch.current.x;
-    const dy = e.touches[0].clientY - lastTouch.current.y;
-    setPan(p => ({ x: p.x + dx, y: p.y + dy }));
-    lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-
-  function resetView() {
-    setScale(isMobile ? 0.5 : 0.8);
-    setPan({ x: 0, y: 0 });
-  }
-
-  // Filtered nodes for search highlight
-  const searchLower = search.toLowerCase();
-  const matchIds = search.trim()
-    ? new Set(nodes.filter(n => n.person.fullName.toLowerCase().includes(searchLower)).map(n => n.id))
-    : new Set<string>();
+  // Handle Search
+  useEffect(() => {
+    if (search.trim().length > 2) {
+      const searchLower = search.toLowerCase();
+      const match = nodes.find(n => n.data.person.fullName.toLowerCase().includes(searchLower));
+      if (match) {
+        setCenter(match.position.x, match.position.y, { zoom: 1, duration: 800 });
+      }
+    }
+  }, [search, nodes, setCenter]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50">
-        <Navbar />
-        <div className="pt-20 flex items-center justify-center h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <Loader2 className="w-10 h-10 text-amber-600 animate-spin mx-auto mb-3" />
-            <p className="text-stone-500">Loading family tree...</p>
-          </div>
-        </div>
+      <div className="pt-20 flex items-center justify-center h-[calc(100vh-80px)]">
+        <Loader2 className="w-10 h-10 text-amber-600 animate-spin mx-auto mb-3" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-stone-50">
-        <Navbar />
-        <div className="pt-20 flex items-center justify-center h-[calc(100vh-80px)]">
-          <div className="text-center">
-            <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-            <p className="text-stone-700 font-medium">{error}</p>
-          </div>
-        </div>
+      <div className="pt-20 flex items-center justify-center h-[calc(100vh-80px)]">
+        <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+        <p className="text-stone-700">{error}</p>
       </div>
     );
   }
 
-  // Mobile: show list view instead of canvas
-  if (isMobile) {
-    return (
-      <div className="min-h-screen bg-stone-50">
-        <Navbar />
-        <div className="pt-20 px-4 py-4 max-w-xl mx-auto">
-          <h1 className="text-xl font-bold text-stone-800 mb-1">Family Tree</h1>
-          <p className="text-stone-500 text-sm mb-4">Tap a person to view their profile and family.</p>
-
-          {/* Branch filter */}
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-            {branches.map(b => (
-              <button
-                key={b.id}
-                onClick={() => setBranch(b.id)}
-                className={cn(
-                  'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
-                  branch === b.id ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-stone-600 border-stone-200'
-                )}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Person list (mobile) */}
-          <div className="space-y-2">
-            {nodes.map(node => (
-              <button
-                key={node.id}
-                onClick={() => router.push(`/people/${node.id}`)}
-                className="w-full flex items-center gap-3 p-3 bg-white/60 backdrop-blur-md rounded-xl border border-stone-200 hover:border-amber-200 transition-all text-left shadow-sm"
-              >
-                <div className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0',
-                  node.person.gender === 'male' ? 'bg-blue-100 text-blue-700' :
-                  node.person.gender === 'female' ? 'bg-rose-100 text-rose-600' :
-                  'bg-stone-100 text-stone-600'
-                )}>
-                  {node.person.isPlaceholder ? '?' : node.person.fullName[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={cn('font-semibold text-stone-800 truncate text-sm', node.person.isPlaceholder && 'italic text-stone-400')}>
-                    {node.person.isPlaceholder ? 'Name to be updated' : node.person.fullName}
-                  </p>
-                  <p className="text-xs text-stone-400">Generation {node.generation + 1}</p>
-                </div>
-                <Users className="w-4 h-4 text-stone-300" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop: Canvas tree
   return (
-    <div className="min-h-screen bg-[#f9faf5] flex flex-col">
-      <Navbar />
-      <div className="pt-16 flex-1 flex flex-col">
-        {/* Toolbar */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-stone-200 px-4 py-2 flex items-center gap-3 flex-wrap shadow-sm z-10 relative">
-          <h1 className="font-bold text-stone-800 text-sm">Family Tree</h1>
+    <div className="flex-1 w-full h-[calc(100vh-64px)] relative overflow-hidden bg-[#f4ebd8]">
+      {/* Background Painted Tree behind React Flow */}
+      <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply z-0">
+        <Image
+          src="/images/tree-bg.jpg"
+          alt="Tree Background"
+          fill
+          priority
+          quality={60}
+          className="object-cover object-center"
+        />
+      </div>
 
-          {/* Branch filter */}
-          <div className="flex gap-1.5 flex-wrap">
-            {branches.map(b => (
-              <button
-                key={b.id}
-                onClick={() => setBranch(b.id)}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors',
-                  branch === b.id ? 'bg-amber-700 text-white border-amber-700 shadow-sm' : 'bg-white/50 text-stone-600 border-stone-200 hover:bg-stone-100'
-                )}
-              >
-                {b.label}
-              </button>
-            ))}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        minZoom={0.1}
+        maxZoom={2}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        className="z-10"
+        fitView
+        proOptions={{ hideAttribution: true }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+      >
+        <MiniMap 
+          nodeColor="#8b5a2b" 
+          maskColor="rgba(244, 235, 216, 0.7)"
+          style={{ backgroundColor: '#fffdf5', border: '1px solid rgba(139, 90, 43, 0.2)', borderRadius: 12 }} 
+          className="shadow-xl mb-4 mr-4"
+        />
+
+        <Panel position="top-left" className="m-4">
+          <div className="bg-[#fffdf5]/90 backdrop-blur-md p-2 rounded-xl border border-[#8b5a2b]/20 shadow-lg flex items-center gap-2">
+            <h1 className="font-serif font-bold text-[#4a332a] text-sm px-2">Our Family Tree</h1>
+            <div className="w-px h-4 bg-[#8b5a2b]/20 mx-1" />
+            <Button size="sm" variant="ghost" className="text-[#8b5a2b] h-7 text-xs" onClick={() => setFocusBranchId(null)}>
+              Entire Family
+            </Button>
           </div>
+        </Panel>
 
-          <div className="ml-auto flex items-center gap-2">
-            {/* Search */}
+        <Panel position="top-right" className="m-4">
+          <div className="flex gap-2 items-center bg-[#fffdf5]/90 backdrop-blur-md p-1.5 rounded-xl border border-[#8b5a2b]/20 shadow-lg">
             {showSearch ? (
               <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 160, opacity: 1 }}>
                 <Input
@@ -348,183 +234,45 @@ export function FamilyTreePage() {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   onBlur={() => { if (!search) setShowSearch(false); }}
-                  className="h-8 w-full text-xs"
+                  className="h-8 w-full text-xs bg-transparent border-[#8b5a2b]/20 focus-visible:ring-[#8b5a2b]"
                 />
               </motion.div>
             ) : (
-              <Button size="icon" variant="ghost" onClick={() => setShowSearch(true)} title="Search">
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-[#8b5a2b]" onClick={() => setShowSearch(true)}>
                 <Search className="w-4 h-4" />
               </Button>
             )}
-
-            {/* Zoom controls */}
-            <Button size="icon" variant="ghost" onClick={() => setScale(s => Math.min(s + 0.1, 2))} title="Zoom in">
+            <div className="w-px h-4 bg-[#8b5a2b]/20" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-[#8b5a2b]" onClick={() => zoomIn()}>
               <ZoomIn className="w-4 h-4" />
             </Button>
-            <span className="text-xs font-medium text-stone-500 w-10 text-center">{Math.round(scale * 100)}%</span>
-            <Button size="icon" variant="ghost" onClick={() => setScale(s => Math.max(s - 0.1, 0.2))} title="Zoom out">
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-[#8b5a2b]" onClick={() => zoomOut()}>
               <ZoomOut className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={resetView} title="Reset view">
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-[#8b5a2b]" onClick={() => fitView({ duration: 800 })}>
+              <Maximize className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-[#8b5a2b]" onClick={() => { setFocusBranchId(null); fitView({ duration: 800 }); }}>
               <RotateCcw className="w-4 h-4" />
             </Button>
           </div>
-        </div>
+        </Panel>
+      </ReactFlow>
 
-        {/* Canvas Area */}
-        <div
-          ref={containerRef}
-          className={cn(
-            "flex-1 overflow-hidden tree-canvas select-none relative",
-            isPanning ? "cursor-grabbing" : "cursor-grab"
-          )}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={() => { lastTouch.current = null; }}
-        >
-          {/* Base Background Color */}
-          <div className="absolute inset-0 bg-[#f4ebd8]" />
-
-          <div
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-              transformOrigin: '0 0',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              willChange: 'transform',
-            }}
-          >
-            {/* The Painted Tree Background - Now moves and scales WITH the tree! */}
-            <div 
-              style={{
-                position: 'absolute',
-                left: -(Math.max(svgW + 2000, 4000) - svgW) / 2,
-                top: -(Math.max(svgH + 2000, 4000) - svgH) / 2 + 300,
-                width: Math.max(svgW + 2000, 4000),
-                height: Math.max(svgH + 2000, 4000),
-                pointerEvents: 'none',
-                opacity: 0.8,
-                mixBlendMode: 'multiply'
-              }}
-            >
-              <Image
-                src="/images/tree-bg.jpg"
-                alt="Tree Background"
-                fill
-                priority
-                quality={60}
-                className="object-cover object-top"
-              />
-            </div>
-
-            {/* SVG edges */}
-            <svg
-              style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
-              width={svgW} height={svgH}
-            >
-              <defs>
-                <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4a332a" stopOpacity="0.85" />
-                  <stop offset="100%" stopColor="#8b5a2b" stopOpacity="0.85" />
-                </linearGradient>
-              </defs>
-              <AnimatePresence>
-                {edges.map((e, i) => {
-                  const x1 = e.x1 - minX + 60;
-                  const y1 = e.y1 - minY + 60;
-                  const x2 = e.x2 - minX + 60;
-                  const y2 = e.y2 - minY + 60;
-                  const midY = (y1 + y2) / 2;
-                  
-                  // Smooth Bezier Curve
-                  const d = `M ${x1} ${y1} C ${x1} ${midY + 20}, ${x2} ${midY - 20}, ${x2} ${y2}`;
-                  
-                  return (
-                    <motion.path
-                      key={`${e.x1}-${e.y1}-${e.x2}-${e.y2}-${i}`}
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 1.2, ease: "easeOut" }}
-                      d={d}
-                      fill="none"
-                      stroke="url(#line-gradient)"
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
-              </AnimatePresence>
-            </svg>
-
-            {/* Person cards */}
-            <AnimatePresence>
-              {nodes.map(node => (
-                <motion.div
-                  key={node.id}
-                  // Removed 'layout' to fix panning jitter!
-                  initial={{ opacity: 0, scale: 0.8, x: node.x - minX + 60 - CARD_W / 2, y: node.y - minY + 80 }}
-                  animate={{ 
-                    opacity: 1, 
-                    scale: 1, 
-                    x: node.x - minX + 60 - CARD_W / 2,
-                    y: node.y - minY + 60,
-                  }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 150, 
-                    damping: 20, 
-                    mass: 0.8 
-                  }}
-                  style={{
-                    position: 'absolute',
-                    width: CARD_W,
-                  }}
-                  className={cn(
-                    search.trim() && !matchIds.has(node.id) && 'opacity-20 transition-opacity duration-300'
-                  )}
-                >
-                  <PersonCard
-                    person={node.person}
-                    childCount={node.children.length}
-                    showQuickActions={canEdit}
-                    onAddChild={() => {
-                      setAddTarget(node.person);
-                      setAddRelType('child');
-                      setAddDialogOpen(true);
-                    }}
-                    onAddSpouse={() => {
-                      setAddTarget(node.person);
-                      setAddRelType('spouse');
-                      setAddDialogOpen(true);
-                    }}
-                    onAddSibling={() => {
-                      setAddTarget(node.person);
-                      setAddRelType('sibling');
-                      setAddDialogOpen(true);
-                    }}
-                    onEdit={() => {
-                      setEditTarget(node.person);
-                      setEditDialogOpen(true);
-                    }}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-
-          {/* Member count badge */}
-          <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-md rounded-xl border border-stone-200/60 px-3 py-2 shadow-sm">
-            <p className="text-xs font-medium text-stone-500">{nodes.length} members shown</p>
-          </div>
-        </div>
-      </div>
+      {/* Profile Side Panel Overlay */}
+      <ProfileSidePanel
+        person={selectedPerson}
+        onClose={() => setSelectedPerson(null)}
+        onViewBranch={handleViewBranch}
+        onViewAncestors={handleViewAncestors}
+        onViewDescendants={handleViewDescendants}
+        onAddRelative={(type, target) => {
+          setAddTarget(target);
+          setAddRelType(type);
+          setAddDialogOpen(true);
+        }}
+        onOpenProfile={(id) => window.open(`/people/${id}`, '_blank')}
+      />
 
       {addDialogOpen && addTarget && (
         <AddRelativeDialog
@@ -542,6 +290,25 @@ export function FamilyTreePage() {
           person={editTarget}
         />
       )}
+    </div>
+  );
+}
+
+import { Suspense } from 'react';
+
+export function FamilyTreePage() {
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <Navbar />
+      <ReactFlowProvider>
+        <Suspense fallback={
+          <div className="pt-20 flex items-center justify-center h-[calc(100vh-80px)]">
+            <Loader2 className="w-10 h-10 text-amber-600 animate-spin mx-auto mb-3" />
+          </div>
+        }>
+          <FlowCanvas />
+        </Suspense>
+      </ReactFlowProvider>
     </div>
   );
 }
