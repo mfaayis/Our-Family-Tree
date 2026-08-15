@@ -165,7 +165,7 @@ function FlowCanvas() {
 
         return {
           ...n,
-          className: cn(n.className, isDimmed ? 'opacity-20 grayscale transition-all duration-700' : 'transition-all duration-700'),
+          className: cn(n.className, isDimmed ? 'opacity-20 grayscale blur-sm scale-95 transition-all duration-700' : 'transition-all duration-700'),
           data: {
             ...n.data,
             isHighlighted,
