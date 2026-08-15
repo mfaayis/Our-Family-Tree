@@ -152,50 +152,64 @@ export default function CinematicExperience() {
       </div>
 
       {/* 
-        ARCHIVAL TAIL (SCENES 17-21)
-        This exists outside the pinned Z-camera. 
-        Once you scroll past 600vh, the pinned container unpins and scrolls up,
-        revealing the Archival Tail underneath it.
+        SPATIAL ARCHIVE (SCENES 17-21)
+        We destroy the CSS grid. Images and text float in absolute space over a massive vertical height.
+        This forces the user to scroll through the archive like a museum wall.
       */}
-      <div className="relative z-30 bg-heritage-parchment-light w-full min-h-screen pt-32 pb-64 px-4 flex flex-col items-center border-t border-heritage-gold-dark/10">
-        <h2 className="font-serif text-5xl md:text-7xl font-bold text-heritage-espresso mb-32 text-center">
-          THE <span className="text-heritage-gold italic">ARCHIVE</span>
-        </h2>
+      <div className="relative z-30 bg-heritage-parchment-light w-full" style={{ height: '300vh' }}>
         
-        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-32 mb-32">
-          {/* Asymmetric layout */}
-          <div className="md:mt-24" data-cursor="explore" data-cursor-text="STORIES">
-            <a href="/stories" className="block relative group">
-              <div className="overflow-hidden rounded-2xl aspect-[3/4] bg-heritage-gold-dark/5">
-                <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1542385151-efd9000785a0?q=80&w=800')] bg-cover bg-center transition-transform duration-1000 group-hover:scale-105 filter grayscale sepia-[0.3]" />
-              </div>
-              <div className="absolute -bottom-8 -right-8 bg-heritage-parchment p-8 shadow-xl border border-heritage-gold-dark/10 max-w-[80%]">
-                <h3 className="font-serif text-3xl text-heritage-espresso mb-2">Generations of Memories</h3>
-                <p className="text-heritage-espresso-light/60 text-sm">Read the stories that shaped us.</p>
-              </div>
-            </a>
-          </div>
+        {/* Massive Sticky Title */}
+        <div className="sticky top-0 w-full h-screen flex items-center justify-center pointer-events-none z-10 opacity-20">
+          <h2 className="font-serif text-[15vw] font-bold text-heritage-espresso leading-none tracking-tighter mix-blend-multiply">
+            THE ARCHIVE
+          </h2>
+        </div>
 
-          <div data-cursor="explore" data-cursor-text="TIMELINE">
-            <a href="/timeline" className="block relative group">
-              <div className="overflow-hidden rounded-2xl aspect-[4/3] bg-heritage-gold-dark/5">
-                <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1455390582262-044cdead27d8?q=80&w=800')] bg-cover bg-center transition-transform duration-1000 group-hover:scale-105 filter grayscale sepia-[0.3]" />
-              </div>
-              <div className="absolute -bottom-8 -left-8 bg-heritage-parchment p-8 shadow-xl border border-heritage-gold-dark/10 max-w-[80%]">
-                <h3 className="font-serif text-3xl text-heritage-espresso mb-2">The Family Timeline</h3>
-                <p className="text-heritage-espresso-light/60 text-sm">Trace the major events through history.</p>
-              </div>
-            </a>
+        {/* Floating Photograph 1: Stories */}
+        <div className="absolute top-[20vh] left-[5vw] w-[45vw] z-20" data-cursor="explore">
+          <a href="/stories" className="block relative group">
+            <div className="w-full aspect-[3/4] bg-heritage-gold-dark/5 overflow-hidden">
+              <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1542385151-efd9000785a0?q=80&w=800')] bg-cover bg-center filter grayscale sepia-[0.3]" />
+            </div>
+            <div className="absolute top-1/2 -right-[20vw] -translate-y-1/2">
+              <h3 className="font-serif text-6xl text-heritage-espresso leading-none mb-4 italic">
+                Generations <br/> of Memories
+              </h3>
+              <p className="text-heritage-espresso-light/60 tracking-widest uppercase text-xs">Read the stories that shaped us.</p>
+            </div>
+          </a>
+        </div>
+
+        {/* Floating Photograph 2: Timeline */}
+        <div className="absolute top-[100vh] right-[5vw] w-[55vw] z-30" data-cursor="explore">
+          <a href="/timeline" className="block relative group">
+            <div className="w-full aspect-[16/9] bg-heritage-gold-dark/5 overflow-hidden">
+              <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1455390582262-044cdead27d8?q=80&w=800')] bg-cover bg-center filter grayscale sepia-[0.3]" />
+            </div>
+            <div className="absolute -bottom-[10vh] left-[10vw]">
+              <h3 className="font-serif text-5xl md:text-8xl text-heritage-espresso leading-none mb-4">
+                THE LINE <br/> OF TIME
+              </h3>
+              <p className="text-heritage-espresso-light/60 tracking-widest uppercase text-sm ml-2">Trace the major events through history.</p>
+            </div>
+          </a>
+        </div>
+
+        {/* Floating Photograph 3: Small offset */}
+        <div className="absolute top-[160vh] left-[15vw] w-[25vw] z-20 pointer-events-none">
+          <div className="w-full aspect-[4/5] bg-heritage-gold-dark/5 overflow-hidden shadow-2xl">
+            <div className="w-full h-full bg-[url('https://images.unsplash.com/photo-1506869640319-ce1a46062c53?q=80&w=800')] bg-cover bg-center filter grayscale sepia-[0.4] opacity-80" />
           </div>
         </div>
 
         {/* Final Constellation / Outro */}
-        <div className="mt-48 text-center" data-cursor="default">
-          <p className="font-serif text-3xl md:text-5xl text-heritage-espresso italic mb-8">
+        <div className="absolute bottom-[20vh] w-full flex flex-col items-center justify-center z-40 text-center" data-cursor="default">
+          <p className="font-serif text-5xl md:text-7xl text-heritage-espresso italic mb-12 mix-blend-multiply">
             The story continues...
           </p>
-          <div className="w-px h-32 bg-gradient-to-b from-heritage-gold-dark to-transparent mx-auto opacity-50" />
+          <div className="w-[1px] h-48 bg-gradient-to-b from-heritage-espresso to-transparent opacity-30" />
         </div>
+
       </div>
     </div>
   );

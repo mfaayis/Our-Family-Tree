@@ -1,8 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, ArrowUpCircle, ArrowDownCircle, Target } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { Person } from '@/lib/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getInitials } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ProfileSidePanelProps {
@@ -18,135 +16,112 @@ interface ProfileSidePanelProps {
 export function ProfileSidePanel({
   person,
   onClose,
+  onOpenProfile,
   onViewBranch,
   onViewAncestors,
   onViewDescendants,
-  onAddRelative,
-  onOpenProfile,
+  onAddRelative
 }: ProfileSidePanelProps) {
   const { canEdit } = useAuth();
 
   return (
     <AnimatePresence>
       {person && (
-        <>
-          {/* Backdrop for mobile */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.3 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-stone-900/30 z-40 md:hidden"
-          />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1 }}
+          className="fixed inset-0 z-40 pointer-events-none flex flex-col md:flex-row justify-between p-8 md:p-16"
+        >
+          {/* Close Button Top Right */}
+          <div className="absolute top-12 right-12 pointer-events-auto z-50">
+            <button
+              onClick={onClose}
+              className="text-heritage-espresso hover:text-heritage-gold transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+          </div>
 
-          {/* Sliding Panel */}
-          <motion.div
-            initial={{ x: '100%', opacity: 0, filter: 'blur(10px)' }}
-            animate={{ x: 0, opacity: 1, filter: 'blur(0px)' }}
-            exit={{ x: '100%', opacity: 0, filter: 'blur(10px)' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-full md:w-[450px] bg-heritage-parchment border-l border-heritage-gold-dark/20 shadow-2xl z-50 flex flex-col overflow-y-auto"
-            data-cursor="default"
-          >
-            {/* Header */}
-            <div className="relative p-8 pb-6 border-b border-heritage-gold-dark/10 flex flex-col items-center">
-              <button
-                onClick={onClose}
-                className="absolute top-6 right-6 p-2 text-heritage-gold-dark hover:bg-heritage-gold-dark/10 rounded-full transition-colors"
-                data-cursor="hover"
-              >
-                <X className="w-5 h-5" />
-              </button>
+          {/* Left Column: Massive Editorial Name */}
+          <div className="flex flex-col justify-end max-w-2xl pb-12 pointer-events-auto">
+            <motion.h2 
+              initial={{ x: -50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
+              className="font-serif text-7xl md:text-9xl text-heritage-espresso leading-[0.8] tracking-tighter"
+            >
+              {person.fullName.split(' ').map((name, i) => (
+                <span key={i} className="block">{name.toUpperCase()}</span>
+              ))}
+            </motion.h2>
 
-              <Avatar className="w-32 h-32 ring-4 ring-heritage-parchment-light shadow-xl mb-6">
-                <AvatarImage src={person.photoUrl || ''} alt={person.fullName} className="object-cover" />
-                <AvatarFallback className="text-3xl font-serif bg-gradient-to-br from-heritage-parchment-light to-heritage-parchment-dark text-heritage-gold-dark">
-                  {person.isPlaceholder ? '?' : getInitials(person.fullName)}
-                </AvatarFallback>
-              </Avatar>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.8 }}
+              className="mt-8 flex gap-8 font-serif text-xl text-heritage-espresso/60 tracking-widest uppercase"
+            >
+              {person.dateOfBirth && <span>Born {new Date(person.dateOfBirth).getFullYear()}</span>}
+              {person.dateOfDeath && <span>Died {new Date(person.dateOfDeath).getFullYear()}</span>}
+            </motion.div>
+          </div>
 
-              <h2 className="font-serif text-2xl font-bold text-[#4a332a] text-center leading-tight">
-                {person.isPlaceholder ? 'Unknown Person' : person.fullName}
-              </h2>
-              
-              <div className="flex gap-4 mt-2 font-serif text-sm text-[#785b46] tracking-wide uppercase">
-                {person.dateOfBirth && <span>★ {new Date(person.dateOfBirth).getFullYear()}</span>}
-                {person.dateOfDeath && <span>✝ {new Date(person.dateOfDeath).getFullYear()}</span>}
-              </div>
-            </div>
-
-            {/* Content Actions */}
-            <div className="flex-1 p-6 space-y-6">
-              
-              <div className="space-y-3">
-                <h3 className="font-serif text-xs tracking-widest text-[#8b5a2b]/80 uppercase">Navigate Tree</h3>
-                
-                <button
-                  onClick={() => onViewBranch(person.id)}
-                  className="w-full flex items-center gap-3 p-3 text-left border border-[#8b5a2b]/20 rounded-xl hover:bg-[#8b5a2b]/5 hover:border-[#8b5a2b]/40 transition-colors text-[#5c4033]"
-                >
-                  <Target className="w-5 h-5 opacity-70" />
-                  <div>
-                    <div className="font-medium">Center & View Branch</div>
-                    <div className="text-xs opacity-70">Focus the tree on this person</div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => onViewAncestors(person.id)}
-                  className="w-full flex items-center gap-3 p-3 text-left border border-[#8b5a2b]/20 rounded-xl hover:bg-[#8b5a2b]/5 hover:border-[#8b5a2b]/40 transition-colors text-[#5c4033]"
-                >
-                  <ArrowUpCircle className="w-5 h-5 opacity-70" />
-                  <div>
-                    <div className="font-medium">View Ancestors</div>
-                    <div className="text-xs opacity-70">Trace lineage upwards</div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => onViewDescendants(person.id)}
-                  className="w-full flex items-center gap-3 p-3 text-left border border-[#8b5a2b]/20 rounded-xl hover:bg-[#8b5a2b]/5 hover:border-[#8b5a2b]/40 transition-colors text-[#5c4033]"
-                >
-                  <ArrowDownCircle className="w-5 h-5 opacity-70" />
-                  <div>
-                    <div className="font-medium">View Descendants</div>
-                    <div className="text-xs opacity-70">See all generations below</div>
-                  </div>
-                </button>
-              </div>
-
-              {canEdit && (
-                <div className="space-y-3">
-                  <h3 className="font-serif text-xs tracking-widest text-[#8b5a2b]/80 uppercase">Add Relatives</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['parent', 'child', 'spouse', 'sibling'] as const).map(type => (
-                      <button
-                        key={type}
-                        onClick={() => onAddRelative(type, person)}
-                        className="flex items-center justify-center gap-2 p-2.5 text-sm font-medium border border-[#8b5a2b]/20 rounded-lg hover:bg-[#8b5a2b]/5 text-[#5c4033] capitalize transition-colors"
-                      >
-                        <UserPlus className="w-4 h-4 opacity-70" />
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            {/* Footer Action */}
-            <div className="p-6 border-t border-[#8b5a2b]/10 bg-[#f4ebd8]/30">
-              <button
+          {/* Right Column: Actions floating in negative space */}
+          <div className="flex flex-col justify-end items-end pb-12 pointer-events-auto">
+            <motion.div 
+              initial={{ x: 50, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 1, delay: 0.6, ease: "easeOut" }}
+              className="flex flex-col gap-6 text-right"
+            >
+              <button 
                 onClick={() => onOpenProfile(person.id)}
-                className="w-full py-3 bg-[#4a332a] hover:bg-[#5c4033] text-[#fffdf5] font-serif font-medium tracking-wide rounded-xl shadow-md transition-colors"
+                className="font-serif text-4xl md:text-5xl text-heritage-espresso hover:text-heritage-gold transition-colors italic"
               >
-                Open Full Profile
+                Read Story
               </button>
-            </div>
+              
+              <button 
+                onClick={() => onViewBranch(person.id)}
+                className="font-serif text-2xl text-heritage-espresso/50 hover:text-heritage-gold transition-colors uppercase tracking-widest"
+              >
+                Explore Branch
+              </button>
 
-          </motion.div>
-        </>
+              <button 
+                onClick={() => onViewAncestors(person.id)}
+                className="font-serif text-2xl text-heritage-espresso/50 hover:text-heritage-gold transition-colors uppercase tracking-widest"
+              >
+                View Ancestors
+              </button>
+
+              <button 
+                onClick={() => onViewDescendants(person.id)}
+                className="font-serif text-2xl text-heritage-espresso/50 hover:text-heritage-gold transition-colors uppercase tracking-widest"
+              >
+                View Descendants
+              </button>
+            </motion.div>
+
+            {/* Admin Controls */}
+            {canEdit && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, delay: 1 }}
+                className="mt-16 flex gap-4 text-xs font-semibold tracking-widest uppercase text-heritage-espresso/40"
+              >
+                <button onClick={() => onAddRelative('parent', person)} className="hover:text-heritage-gold">Add Parent</button>
+                <button onClick={() => onAddRelative('sibling', person)} className="hover:text-heritage-gold">Add Sibling</button>
+                <button onClick={() => onAddRelative('spouse', person)} className="hover:text-heritage-gold">Add Spouse</button>
+                <button onClick={() => onAddRelative('child', person)} className="hover:text-heritage-gold">Add Child</button>
+              </motion.div>
+            )}
+          </div>
+
+        </motion.div>
       )}
     </AnimatePresence>
   );
