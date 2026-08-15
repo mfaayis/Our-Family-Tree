@@ -386,18 +386,8 @@ export function FamilyTreePage() {
           onTouchMove={onTouchMove}
           onTouchEnd={() => { lastTouch.current = null; }}
         >
-          {/* Aesthetic Background */}
+          {/* Base Background Color */}
           <div className="absolute inset-0 bg-[#f4ebd8]" />
-          <div className="absolute inset-0 pointer-events-none opacity-80 mix-blend-multiply">
-            <Image
-              src="/images/tree-bg.jpg"
-              alt="Tree Background"
-              fill
-              priority
-              quality={60}
-              className="object-cover object-center"
-            />
-          </div>
 
           <div
             style={{
@@ -409,6 +399,29 @@ export function FamilyTreePage() {
               willChange: 'transform',
             }}
           >
+            {/* The Painted Tree Background - Now moves and scales WITH the tree! */}
+            <div 
+              style={{
+                position: 'absolute',
+                left: -(Math.max(svgW + 2000, 4000) - svgW) / 2,
+                top: -(Math.max(svgH + 2000, 4000) - svgH) / 2 + 300,
+                width: Math.max(svgW + 2000, 4000),
+                height: Math.max(svgH + 2000, 4000),
+                pointerEvents: 'none',
+                opacity: 0.8,
+                mixBlendMode: 'multiply'
+              }}
+            >
+              <Image
+                src="/images/tree-bg.jpg"
+                alt="Tree Background"
+                fill
+                priority
+                quality={60}
+                className="object-cover object-top"
+              />
+            </div>
+
             {/* SVG edges */}
             <svg
               style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
