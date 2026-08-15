@@ -1,9 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Users, Plus, Edit3, Heart } from 'lucide-react';
-import { getInitials, getGenderBg, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import type { Person } from '@/lib/types';
 
@@ -35,25 +33,32 @@ export function PersonCard({
     router.push(`/people/${person.id}`);
   }
 
-  // Base background derived from gender, but we'll apply a glass effect
-  const genderBg = person.gender === 'male' ? 'bg-blue-50/80' : 
-                   person.gender === 'female' ? 'bg-rose-50/80' : 
-                   'bg-stone-50/80';
+  // Vintage Parchment Aesthetic
+  const cardBg = 'bg-[#fffdf5]/95';
+  const cardBorder = 'border-[#8b5a2b]/40';
+  
+  const birthYear = person.dateOfBirth ? new Date(person.dateOfBirth).getFullYear() : '';
+  const deathYear = person.dateOfDeath ? new Date(person.dateOfDeath).getFullYear() : '';
+  const dateStr = birthYear ? `${birthYear} ${deathYear ? '- ' + deathYear : ''}` : '';
 
-  const genderBorder = person.gender === 'male' ? 'border-blue-200/60' : 
-                       person.gender === 'female' ? 'border-rose-200/60' : 
-                       'border-stone-200/60';
+  const locationStr = person.birthPlace || person.currentLocation || '';
+
+  // Split name into first and last for aesthetic stacking
+  const nameParts = person.fullName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
   return (
     <motion.div
       whileHover={{ y: -4, scale: 1.02, transition: { duration: 0.2 } }}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        'person-card group rounded-2xl border shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] cursor-pointer select-none relative backdrop-blur-md transition-all',
-        genderBg,
-        genderBorder,
-        compact ? 'p-3 min-w-[140px] max-w-[160px]' : 'p-4 min-w-[160px] max-w-[200px]',
-        isPlaceholder && 'opacity-70 border-dashed bg-white/50'
+        'person-card group border shadow-[0_4px_20px_-4px_rgba(139,90,43,0.15)] cursor-pointer select-none relative backdrop-blur-md transition-all flex flex-col items-center justify-center',
+        'rounded-[100px]', // Oval shape
+        cardBg,
+        cardBorder,
+        compact ? 'py-3 px-4 min-w-[140px] max-w-[160px] h-[70px]' : 'py-4 px-6 min-w-[160px] max-w-[200px] h-[95px]',
+        isPlaceholder && 'opacity-70 border-dashed bg-[#fffdf5]/60'
       )}
       onClick={handleClick}
       role="button"
@@ -67,7 +72,7 @@ export function PersonCard({
           {onEdit && (
             <button
               onClick={e => { e.stopPropagation(); onEdit(); }}
-              className="bg-white hover:bg-stone-50 text-stone-600 border border-stone-200 shadow-sm rounded-full p-1.5 transition-colors"
+              className="bg-[#fffdf5] hover:bg-[#f4ebd8] text-[#8b5a2b] border border-[#8b5a2b]/30 shadow-sm rounded-full p-1.5 transition-colors"
               title="Edit Person"
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -76,7 +81,7 @@ export function PersonCard({
           {onAddSpouse && (
             <button
               onClick={e => { e.stopPropagation(); onAddSpouse(); }}
-              className="bg-white hover:bg-pink-50 text-pink-600 border border-pink-100 shadow-sm rounded-full p-1.5 transition-colors"
+              className="bg-[#fffdf5] hover:bg-[#f4ebd8] text-[#8b5a2b] border border-[#8b5a2b]/30 shadow-sm rounded-full p-1.5 transition-colors"
               title="Add Spouse"
             >
               <Heart className="w-3.5 h-3.5" />
@@ -85,7 +90,7 @@ export function PersonCard({
           {onAddChild && (
             <button
               onClick={e => { e.stopPropagation(); onAddChild(); }}
-              className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-100 shadow-sm rounded-full p-1.5 transition-colors"
+              className="bg-[#fffdf5] hover:bg-[#f4ebd8] text-[#8b5a2b] border border-[#8b5a2b]/30 shadow-sm rounded-full p-1.5 transition-colors"
               title="Add Child"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -94,57 +99,44 @@ export function PersonCard({
         </div>
       )}
 
-      {/* Avatar */}
-      <div className="flex justify-center mb-2">
-        <Avatar className={cn(compact ? 'w-10 h-10' : 'w-14 h-14', 'ring-2 ring-white shadow-sm')}>
-          <AvatarImage src={person.photoUrl || ''} alt={person.fullName} className="object-cover" />
-          <AvatarFallback className={cn(
-            'font-semibold',
-            person.gender === 'male' ? 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700' : 
-            person.gender === 'female' ? 'bg-gradient-to-br from-rose-100 to-rose-200 text-rose-700' : 
-            'bg-gradient-to-br from-stone-100 to-stone-200 text-stone-700',
-            compact ? 'text-xs' : 'text-sm'
-          )}>
-            {isPlaceholder ? '?' : getInitials(person.fullName)}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-
       {/* Name */}
-      <div className="text-center">
-        <p className={cn(
-          'font-semibold text-stone-800 leading-tight',
-          compact ? 'text-xs' : 'text-sm',
-          isPlaceholder && 'italic text-stone-400'
-        )}>
-          {isPlaceholder ? 'Name unknown' : person.fullName}
-        </p>
-
-        {relationshipLabel && (
-          <p className="text-[11px] font-medium text-stone-500 mt-0.5 capitalize tracking-wide">{relationshipLabel}</p>
+      <div className="text-center w-full">
+        {isPlaceholder ? (
+          <p className="font-serif font-bold text-[#5c4033] leading-tight text-sm italic opacity-60">
+            Unknown
+          </p>
+        ) : (
+          <>
+            <p className="font-serif font-bold text-[#4a332a] leading-[1.1] uppercase tracking-wider text-[11px] sm:text-xs">
+              {firstName}
+            </p>
+            {lastName && (
+              <p className="font-serif font-bold text-[#4a332a] leading-[1.1] uppercase tracking-wider text-[11px] sm:text-xs">
+                {lastName}
+              </p>
+            )}
+          </>
         )}
 
-        {/* Gender badge */}
-        {!compact && person.gender !== 'unknown' && (
-          <Badge
-            variant={person.gender === 'male' ? 'male' : 'female'}
-            className="mt-1.5 text-[10px] font-medium px-1.5 py-0 shadow-sm"
-          >
-            {person.gender === 'male' ? '\u2642 Male' : '\u2640 Female'}
-          </Badge>
+        {/* Dates */}
+        {dateStr && (
+          <p className="font-serif text-[#785b46] text-[9px] mt-0.5 tracking-widest uppercase">
+            {dateStr}
+          </p>
         )}
 
-        {/* Child count */}
-        {childCount > 0 && (
-          <div className="flex items-center justify-center gap-1 mt-2 text-[11px] font-medium text-stone-500 bg-white/60 inline-flex px-2 py-0.5 rounded-full border border-stone-200/50">
-            <Users className="w-3 h-3" />
-            {childCount} {childCount === 1 ? 'child' : 'children'}
-          </div>
+        {/* Location */}
+        {locationStr && (
+          <p className="font-serif text-[#785b46] text-[8px] mt-0.5 tracking-widest uppercase truncate max-w-full px-2">
+            {locationStr}
+          </p>
         )}
 
         {/* Placeholder note */}
         {isPlaceholder && (
-          <p className="text-xs text-amber-600/80 mt-1 font-medium">Name to be updated</p>
+          <p className="font-serif text-[#8b5a2b]/80 text-[8px] mt-1 tracking-widest uppercase">
+            To Be Added
+          </p>
         )}
       </div>
     </motion.div>

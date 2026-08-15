@@ -28,11 +28,12 @@ import {
   Heart,
   ChevronRight,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 
 export function PersonProfilePage({ personId }: { personId: string }) {
   const router = useRouter();
-  const { getPerson, getChildrenOf, getParentsOf, getSpousesOf, getSiblingsOf, relationships, people } = useFamilyTree();
+  const { getPerson, getChildrenOf, getParentsOf, getSpousesOf, getSiblingsOf, relationships, people, loading } = useFamilyTree();
   const { isAdmin, canEdit } = useAuth();
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -53,6 +54,20 @@ export function PersonProfilePage({ personId }: { personId: string }) {
   useEffect(() => {
     getAuditLogs(personId).then(setAuditLogs).catch(console.error);
   }, [personId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone-50">
+        <Navbar />
+        <div className="pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 text-amber-600 animate-spin mx-auto mb-3" />
+            <p className="text-stone-500">Loading person data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!person) {
     return (

@@ -22,10 +22,10 @@ import {
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const CARD_W = 180;
-const CARD_H = 130;
-const H_GAP = 50;
-const V_GAP = 90;
+const CARD_W = 160;
+const CARD_H = 95;
+const H_GAP = 60;
+const V_GAP = 100;
 
 interface TreeNodeData {
   id: string;
@@ -374,19 +374,16 @@ export function FamilyTreePage() {
           onTouchEnd={() => { lastTouch.current = null; }}
         >
           {/* Aesthetic Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#f2f6e9] via-[#fbfdf7] to-[#e8efe0] pointer-events-none" />
-          
-          <svg
-            className="absolute inset-0 pointer-events-none opacity-[0.03]"
-            width="100%" height="100%"
-          >
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#000" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
+          <div className="absolute inset-0 bg-[#f4ebd8]" />
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-80 mix-blend-multiply" 
+            style={{
+              backgroundImage: "url('/images/tree-bg.jpg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundAttachment: "fixed"
+            }}
+          />
 
           <div
             style={{
@@ -405,8 +402,8 @@ export function FamilyTreePage() {
             >
               <defs>
                 <linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#d1d5db" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#9ca3af" stopOpacity="0.4" />
+                  <stop offset="0%" stopColor="#4a332a" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="#8b5a2b" stopOpacity="0.85" />
                 </linearGradient>
               </defs>
               <AnimatePresence>
@@ -430,7 +427,7 @@ export function FamilyTreePage() {
                       d={d}
                       fill="none"
                       stroke="url(#line-gradient)"
-                      strokeWidth="2.5"
+                      strokeWidth="5"
                       strokeLinecap="round"
                     />
                   );
