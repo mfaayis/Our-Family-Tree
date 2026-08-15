@@ -28,21 +28,26 @@ export default function StoriesPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-heritage-parchment-light pt-32 pb-16 px-4 max-w-4xl mx-auto" data-cursor="default">
       <Navbar />
       
-      <div className="pt-32 pb-16 px-4 max-w-4xl mx-auto">
+      <div className="relative z-10">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
+          transition={{ duration: 1, ease: 'easeOut' }}
+          className="text-center mb-24"
         >
-          <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-6">
-            <BookOpen className="w-8 h-8" />
+          <div className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full text-xs font-semibold tracking-[0.25em] uppercase text-heritage-gold-dark border border-heritage-gold-dark/20 bg-heritage-gold-dark/5">
+            <BookOpen className="w-3 h-3" />
+            Family Stories
           </div>
-          <h1 className="text-4xl md:text-5xl font-serif text-stone-800 mb-4 tracking-tight">Family Stories</h1>
-          <p className="text-lg text-stone-500 max-w-2xl mx-auto font-serif">
-            The memories, anecdotes, and histories that have shaped the Kassim Pillai family across the generations.
+          <h1 className="text-6xl md:text-8xl font-serif text-heritage-espresso mb-8 tracking-tighter leading-none">
+            Generations of <br />
+            <span className="text-heritage-gold italic">Memories</span>
+          </h1>
+          <p className="text-xl text-heritage-espresso-light/70 max-w-2xl mx-auto font-serif italic">
+            The anecdotes, trials, and triumphs that have shaped the Kassim Pillai family.
           </p>
         </motion.div>
 

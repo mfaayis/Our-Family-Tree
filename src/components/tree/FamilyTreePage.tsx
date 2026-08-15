@@ -299,10 +299,9 @@ function FlowCanvas() {
 
 import { Suspense } from 'react';
 
-export function FamilyTreePage() {
+export function TreeCanvas() {
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <Navbar />
+    <div className="w-full h-full flex flex-col relative" data-cursor="explore">
       <ReactFlowProvider>
         <Suspense fallback={
           <div className="pt-20 flex items-center justify-center h-[calc(100vh-80px)]">

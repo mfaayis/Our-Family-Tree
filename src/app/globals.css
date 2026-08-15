@@ -1,135 +1,88 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-heritage-parchment: #f4ebd8;
+  --color-heritage-parchment-light: #faf6ee;
+  --color-heritage-parchment-dark: #eedfc4;
+  --color-heritage-espresso: #2c1810;
+  --color-heritage-espresso-light: #4a332a;
+  --color-heritage-gold: #c4a064;
+  --color-heritage-gold-dark: #8b5a2b;
+  --color-heritage-sage: #9caaa0;
+  --color-heritage-rose: #d6aba7;
+  --color-heritage-blue: #b3c2cd;
+
+  --font-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Inter', 'DM Sans', system-ui, sans-serif;
+}
+
 @layer base {
   :root {
     --background: 250 249 247;
-    --foreground: 28 25 23;
+    --foreground: 44 24 16;
   }
 
   * {
     box-sizing: border-box;
+    cursor: none; /* We will use a custom cursor */
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
-
-  body {
-    background: rgb(250, 249, 247);
-    color: rgb(28, 25, 23);
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* Custom scrollbar */
+  /* Basic scrollbar hidden for cinematic feel, we rely on Lenis */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
+    width: 0px;
     background: transparent;
   }
 
-  ::-webkit-scrollbar-thumb {
-    background: #d6d3d1;
-    border-radius: 3px;
+  body {
+    background-color: var(--color-heritage-parchment-light);
+    color: var(--color-heritage-espresso);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #a8a29e;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
   }
 }
 
 @layer utilities {
-  .animate-fade-in {
-    animation: fadeIn 0.3s ease-in-out;
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   }
 
-  .animate-slide-up {
-    animation: slideUp 0.4s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .tree-line {
-    stroke: #d6d3d1;
-    stroke-width: 2;
-    fill: none;
-  }
-
-  .person-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  }
-
-  .person-card {
-    transition: all 0.2s ease;
-  }
-
-  /* Family tree canvas */
-  .tree-canvas {
-    cursor: grab;
-  }
-
-  .tree-canvas:active {
-    cursor: grabbing;
-  }
-
-  /* ── React Flow overrides — premium parchment look ── */
+  /* ── React Flow overrides ── */
   .react-flow__renderer {
     background: transparent;
   }
 
-  /* Remove default blue selection border */
   .react-flow__node.selected > * {
-    box-shadow: 0 0 0 2px #8b5a2b !important;
+    box-shadow: 0 0 0 2px var(--color-heritage-gold) !important;
   }
 
-  /* Remove ugly default edge handles */
   .react-flow__handle {
     opacity: 0 !important;
     pointer-events: none !important;
-    width: 4px !important;
-    height: 4px !important;
-    min-width: 4px !important;
-    min-height: 4px !important;
-    border: none !important;
-    background: transparent !important;
   }
 
-  /* Smooth edge rendering */
   .react-flow__edge path {
     transition: stroke 0.3s ease;
   }
 
-  /* Minimap styling */
   .react-flow__minimap {
     border-radius: 12px !important;
     overflow: hidden;
+    background: var(--color-heritage-parchment) !important;
+    border: 1px solid rgba(139, 90, 43, 0.2);
   }
 
-  /* Parchment background for React Flow canvas */
   .react-flow__background {
-    background-color: #f4ebd8 !important;
+    background-color: transparent !important; /* Tree overlays the main background */
   }
 
-  /* Remove the default toolbar attribution */
   .react-flow__attribution {
     display: none !important;
   }
-
-  /* Node hover — bring forward */
-  .react-flow__node:hover {
-    z-index: 1000 !important;
-  }
 }
+

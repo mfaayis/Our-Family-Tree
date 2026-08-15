@@ -1,5 +1,5 @@
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { FamilyTreePage } from '@/components/tree/FamilyTreePage';
+import { Navbar } from '@/components/layout/Navbar';
+import { TreeCanvas } from '@/components/tree/FamilyTreePage';
 
 export const metadata = {
   title: 'Family Tree — Kassim Pillai Family',
@@ -7,6 +7,9 @@ export const metadata = {
 
 export default function TreePage() {
   return (
-    <FamilyTreePage />
+    <div className="h-screen w-full relative bg-heritage-parchment-light">
+      <Navbar />
+      <TreeCanvas />
+    </div>
   );
 }

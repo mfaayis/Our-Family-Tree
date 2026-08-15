@@ -5,6 +5,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { FamilyTreeProvider } from '@/contexts/FamilyTreeContext';
 import { Toaster } from 'react-hot-toast';
 
+import LenisScroller from '@/components/layout/LenisScroller';
+import CustomCursor from '@/components/ui/CustomCursor';
+
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -20,10 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <AuthProvider>
-          <FamilyTreeProvider>
-            {children}
+      <body className={`${inter.className} bg-noise`}>
+        <CustomCursor />
+        <LenisScroller>
+          <AuthProvider>
+            <FamilyTreeProvider>
+              {children}
             <Toaster
               position="top-right"
               toastOptions={{
@@ -44,8 +49,9 @@ export default function RootLayout({
                 },
               }}
             />
-          </FamilyTreeProvider>
-        </AuthProvider>
+            </FamilyTreeProvider>
+          </AuthProvider>
+        </LenisScroller>
       </body>
     </html>
   );

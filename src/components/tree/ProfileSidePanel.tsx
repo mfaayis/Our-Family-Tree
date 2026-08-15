@@ -41,24 +41,26 @@ export function ProfileSidePanel({
 
           {/* Sliding Panel */}
           <motion.div
-            initial={{ x: '100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
+            initial={{ x: '100%', opacity: 0, filter: 'blur(10px)' }}
+            animate={{ x: 0, opacity: 1, filter: 'blur(0px)' }}
+            exit={{ x: '100%', opacity: 0, filter: 'blur(10px)' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-full md:w-96 bg-[#fffdf5] border-l border-[#8b5a2b]/20 shadow-2xl z-50 flex flex-col overflow-y-auto"
+            className="fixed top-0 right-0 bottom-0 w-full md:w-[450px] bg-heritage-parchment border-l border-heritage-gold-dark/20 shadow-2xl z-50 flex flex-col overflow-y-auto"
+            data-cursor="default"
           >
             {/* Header */}
-            <div className="relative p-6 pb-4 border-b border-[#8b5a2b]/10 flex flex-col items-center">
+            <div className="relative p-8 pb-6 border-b border-heritage-gold-dark/10 flex flex-col items-center">
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 text-[#8b5a2b] hover:bg-[#8b5a2b]/10 rounded-full transition-colors"
+                className="absolute top-6 right-6 p-2 text-heritage-gold-dark hover:bg-heritage-gold-dark/10 rounded-full transition-colors"
+                data-cursor="hover"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <Avatar className="w-24 h-24 ring-4 ring-[#f4ebd8] shadow-md mb-4">
+              <Avatar className="w-32 h-32 ring-4 ring-heritage-parchment-light shadow-xl mb-6">
                 <AvatarImage src={person.photoUrl || ''} alt={person.fullName} className="object-cover" />
-                <AvatarFallback className="text-2xl font-serif bg-gradient-to-br from-[#f4ebd8] to-[#e6d5b8] text-[#8b5a2b]">
+                <AvatarFallback className="text-3xl font-serif bg-gradient-to-br from-heritage-parchment-light to-heritage-parchment-dark text-heritage-gold-dark">
                   {person.isPlaceholder ? '?' : getInitials(person.fullName)}
                 </AvatarFallback>
               </Avatar>

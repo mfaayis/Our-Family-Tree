@@ -87,8 +87,9 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             'shadow-[0_6px_30px_-6px_rgba(139,90,43,0.18)]',
             'transition-shadow duration-200 hover:shadow-[0_12px_40px_-8px_rgba(139,90,43,0.35)]',
             genderAccent,
-            isPlaceholder && 'opacity-70 border-dashed'
           )}
+          data-cursor="view"
+          data-cursor-text={firstName}
         >
           {/* Avatar initial circle */}
           <div className={cn(
