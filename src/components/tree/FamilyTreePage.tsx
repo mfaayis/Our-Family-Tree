@@ -68,11 +68,12 @@ function FlowCanvas() {
 
   // Initial root
   useEffect(() => {
-    if (rootPersonId && expandedNodes.size === 0) {
-      // Expand root by default
-      setExpandedNodes(new Set([rootPersonId]));
+    if (rootPersonId && expandedNodes.size === 0 && people.length > 0) {
+      // Expand ALL nodes by default initially so the whole tree is visible
+      const allIds = people.map(p => p.id);
+      setExpandedNodes(new Set(allIds));
     }
-  }, [rootPersonId]); // eslint-disable-line
+  }, [rootPersonId, people]); // eslint-disable-line
 
   // Handle URL focus
   useEffect(() => {
