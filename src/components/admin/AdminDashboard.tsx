@@ -10,15 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   getAllUsers, getChangeRequests, getAllPeople, getAuditLogs,
   reviewChangeRequest, updateUserProfile, createInvitation,
-  getFamilyStats
+  getFamilyStats, softDeletePerson
 } from '@/lib/db';
 import { useFamilyTree } from '@/contexts/FamilyTreeContext';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 import type { ChangeRequest, AuditLog, UserProfile } from '@/lib/types';
 import {
-  CheckSquare, RefreshCw, Copy, Check, Loader2, ChevronDown, ChevronUp, X
+  CheckSquare, RefreshCw, Copy, Check, Loader2, ChevronDown, ChevronUp, X,
+  Trash2, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AddPersonWizard } from './AddPersonWizard';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 
 export function AdminDashboard() {
   const { user } = useAuth();
@@ -260,9 +263,10 @@ export function AdminDashboard() {
           {/* People */}
           <TabsContent value="people">
             {loading ? <LoadingSpinner /> : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm text-stone-500">{people.length} people in database</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-stone-500">{people.filter(p => !p.isDeleted).length} people in database</span>
+                  <AddPersonWizard />
                 </div>
                 {people
                   .filter(p => !p.isDeleted)
@@ -277,10 +281,11 @@ export function AdminDashboard() {
                         {p.gender} &bull; {p.isPlaceholder ? 'Placeholder' : p.isLiving ? 'Living' : 'Deceased'}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-3">
                       <Badge variant={p.isPlaceholder ? 'warning' : 'secondary'}>
                         {p.isPlaceholder ? 'Placeholder' : 'Active'}
                       </Badge>
+                      <SafeDeletePersonDialog person={p} onDeleted={() => { loadData(); refresh(); }} />
                     </div>
                   </div>
                 ))}
@@ -420,5 +425,74 @@ function LoadingSpinner() {
     <div className="flex items-center justify-center py-12">
       <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
     </div>
+  );
+}
+
+function SafeDeletePersonDialog({ person, onDeleted }: { person: any, onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const { getChildrenOf, getSpousesOf } = useFamilyTree();
+
+  const children = getChildrenOf(person.id);
+  const spouses = getSpousesOf(person.id);
+  const totalDescendants = children.length + spouses.length; // simplified count for warning
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      await softDeletePerson(person.id, user.uid);
+      toast.success(`${person.fullName} deleted safely.`);
+      setOpen(false);
+      onDeleted();
+    } catch (err) {
+      toast.error('Failed to delete person.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="text-stone-400 hover:text-red-600 transition-colors p-1" title="Delete Person">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-5 h-5" />
+            Delete Family Member
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <p className="text-stone-700 mb-4">
+            Are you sure you want to delete <strong>{person.fullName}</strong>?
+          </p>
+          
+          {totalDescendants > 0 && (
+            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-sm mb-4">
+              <strong>WARNING:</strong> This person has {spouses.length} spouse(s) and {children.length} children. 
+              Deleting them will break the visual tree connections for their descendants.
+            </div>
+          )}
+
+          <p className="text-sm text-stone-500">
+            This action will soft-delete the person so they can be restored later if needed, but they will immediately disappear from the public family tree.
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            Delete Person
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -20,6 +20,8 @@ import {
   X,
   Home,
   Bell,
+  BookOpen,
+  History,
 } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -27,11 +29,10 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/tree', label: 'Family Tree', icon: TreePine },
+  { href: '/stories', label: 'Stories', icon: BookOpen },
+  { href: '/timeline', label: 'Timeline', icon: History },
   { href: '/search', label: 'Search', icon: Search },
-  { href: '/my-branch', label: 'My Branch', icon: GitBranch },
-  { href: '/people', label: 'People', icon: Users },
   { href: '/gallery', label: 'Gallery', icon: Image },
-  { href: '/activity', label: 'Activity', icon: Activity },
 ];
 
 export function Navbar() {

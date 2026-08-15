@@ -156,3 +156,42 @@ export interface FamilyStats {
   pendingRequests: number;
   recentlyAdded: Person[];
 }
+
+// ─── Archival Features ────────────────────────────────────────────────────────
+export interface Story {
+  id: string;
+  title: string;
+  content: string; // Markdown or rich text
+  date?: string;
+  authorId: string;
+  authorName: string;
+  personIds: string[]; // Linked people
+  branchIds?: string[];
+  photoUrls?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  year: number; // e.g. 1950
+  date?: string; // Optional exact date
+  title: string;
+  description: string;
+  personIds: string[]; // Linked people
+  branchIds?: string[];
+  photoUrl?: string;
+  createdAt: string;
+}
+
+export interface PhotoAsset {
+  id: string;
+  url: string;
+  caption?: string;
+  date?: string;
+  location?: string;
+  personIds: string[]; // Linked people
+  branchIds?: string[];
+  uploadedBy: string; // userId
+  createdAt: string;
+}
