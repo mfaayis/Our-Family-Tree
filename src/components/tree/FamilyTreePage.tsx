@@ -180,17 +180,8 @@ function FlowCanvas() {
 
   return (
     <div className="flex-1 w-full h-[calc(100vh-64px)] relative overflow-hidden bg-[#f4ebd8]">
-      {/* Background Painted Tree behind React Flow */}
-      <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply z-0">
-        <Image
-          src="/images/tree-bg.jpg"
-          alt="Tree Background"
-          fill
-          priority
-          quality={60}
-          className="object-cover object-center"
-        />
-      </div>
+      {/* Background Painted Tree behind React Flow - REMOVED AS REQUESTED */}
+      <div className="absolute inset-0 pointer-events-none z-0" />
 
       <ReactFlow
         nodes={nodes}
