@@ -20,6 +20,7 @@ interface PersonNodeData {
   onAddSibling?: (person: Person) => void;
   onAddParent?: (person: Person) => void;
   onEdit?: (person: Person) => void;
+  isHighlighted?: boolean;
 }
 
 function PersonNode({ data }: { data: PersonNodeData }) {
@@ -85,8 +86,10 @@ function PersonNode({ data }: { data: PersonNodeData }) {
             'bg-[#fffdf5] border-2 rounded-[90px]',
             'py-4 px-5 h-[100px]',
             'shadow-[0_6px_30px_-6px_rgba(139,90,43,0.18)]',
-            'transition-shadow duration-200 hover:shadow-[0_12px_40px_-8px_rgba(139,90,43,0.35)]',
+            'transition-all duration-500 hover:shadow-[0_12px_40px_-8px_rgba(139,90,43,0.35)]',
             genderAccent,
+            data.isHighlighted && 'ring-4 ring-heritage-gold shadow-[0_0_50px_rgba(196,160,100,0.6)] scale-110 z-50 bg-white',
+            isPlaceholder && 'opacity-70 border-dashed'
           )}
           data-cursor="view"
           data-cursor-text={firstName}

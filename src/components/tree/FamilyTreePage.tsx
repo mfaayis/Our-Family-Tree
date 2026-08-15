@@ -95,6 +95,11 @@ function FlowCanvas() {
 
   const handleSelectPerson = useCallback((person: Person) => {
     setSelectedPerson(person);
+    // Smooth cinematic travel to the selected person
+    setTimeout(() => {
+      // Find the node in the DOM or from ReactFlow instance (since we are inside ReactFlowProvider)
+      // Actually we will handle this in an effect that watches selectedPerson
+    }, 50);
   }, []);
 
   const handleViewBranch = useCallback((id: string) => {
@@ -136,11 +141,34 @@ function FlowCanvas() {
       assignTreePositions(tree, 180, 110, 60, 100);
       const graph = generateReactFlowGraph(tree, expandedNodes);
       
+      // Calculate highlighted nodes for "Family Constellation" (Scene 08)
+      let highlightedIds = new Set<string>();
+      if (selectedPerson) {
+        highlightedIds.add(selectedPerson.id);
+        const rels = relationships.filter(r => r.personA === selectedPerson.id || r.personB === selectedPerson.id);
+        rels.forEach(r => {
+          highlightedIds.add(r.personA);
+          highlightedIds.add(r.personB);
+        });
+        
+        // Include siblings implicitly
+        const parents = rels.filter(r => r.relationshipType === 'parent' && r.personB === selectedPerson.id).map(r => r.personA);
+        parents.forEach(pId => {
+          relationships.filter(r => r.relationshipType === 'parent' && r.personA === pId).forEach(r => highlightedIds.add(r.personB));
+        });
+      }
+
       // Inject callbacks into nodes
-      const interactiveNodes = graph.nodes.map(n => ({
-        ...n,
-        data: {
-          ...n.data,
+      const interactiveNodes = graph.nodes.map(n => {
+        const isDimmed = selectedPerson ? !highlightedIds.has(n.id) : false;
+        const isHighlighted = selectedPerson ? highlightedIds.has(n.id) : false;
+
+        return {
+          ...n,
+          className: cn(n.className, isDimmed ? 'opacity-20 grayscale transition-all duration-700' : 'transition-all duration-700'),
+          data: {
+            ...n.data,
+            isHighlighted,
           onToggleExpand: handleToggleExpand,
           onSelectPerson: handleSelectPerson,
           onAddChild: (p: Person) => openAddDialog('child', p),
@@ -149,22 +177,43 @@ function FlowCanvas() {
           onAddParent: (p: Person) => openAddDialog('parent', p),
           onEdit: openEditDialog,
         }
-      }));
+      };
+    });
       
-      return { nodes: interactiveNodes, edges: graph.edges };
+    // Dim unrelated edges
+    const interactiveEdges = graph.edges.map(e => {
+      const isRelated = selectedPerson ? (highlightedIds.has(e.source) && highlightedIds.has(e.target)) : true;
+      return {
+        ...e,
+        className: cn(e.className, !isRelated && 'opacity-10 transition-opacity duration-700')
+      };
+    });
+      
+    return { nodes: interactiveNodes, edges: interactiveEdges };
     }
     return { nodes: [], edges: [] };
   }, [rootPersonId, focusBranchId, peopleMap, relationships, expandedNodes, handleToggleExpand, handleSelectPerson, openAddDialog, openEditDialog]);
 
-  // Center on focus Branch
+  // Center on focus Branch or selected person
   useEffect(() => {
     if (focusBranchId && nodes.length > 0) {
       const targetNode = nodes.find(n => n.id === focusBranchId);
       if (targetNode) {
-        setTimeout(() => setCenter(targetNode.position.x, targetNode.position.y, { zoom: 1, duration: 800 }), 100);
+        setTimeout(() => setCenter(targetNode.position.x, targetNode.position.y, { zoom: 1, duration: 1200 }), 100);
       }
     }
-  }, [focusBranchId, nodes]); // eslint-disable-line
+  }, [focusBranchId, nodes, setCenter]);
+
+  // Cinematic pan to selected person (Scene 07)
+  useEffect(() => {
+    if (selectedPerson && nodes.length > 0) {
+      const targetNode = nodes.find(n => n.id === selectedPerson.id);
+      if (targetNode) {
+        setTimeout(() => setCenter(targetNode.position.x, targetNode.position.y, { zoom: 1.2, duration: 1500 }), 100);
+      }
+    }
+  }, [selectedPerson, nodes, setCenter]);
+
 
   // Handle Search
   useEffect(() => {
