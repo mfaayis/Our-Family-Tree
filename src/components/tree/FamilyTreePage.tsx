@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useFamilyTree } from '@/contexts/FamilyTreeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/layout/Navbar';
@@ -114,7 +115,7 @@ export function FamilyTreePage() {
   // Dialog States
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addTarget, setAddTarget] = useState<Person | null>(null);
-  const [addRelType, setAddRelType] = useState<'child' | 'spouse'>('child');
+  const [addRelType, setAddRelType] = useState<'child' | 'parent' | 'sibling' | 'spouse'>('child');
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Person | null>(null);
@@ -375,15 +376,16 @@ export function FamilyTreePage() {
         >
           {/* Aesthetic Background */}
           <div className="absolute inset-0 bg-[#f4ebd8]" />
-          <div 
-            className="absolute inset-0 pointer-events-none opacity-80 mix-blend-multiply" 
-            style={{
-              backgroundImage: "url('/images/tree-bg.jpg')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundAttachment: "fixed"
-            }}
-          />
+          <div className="absolute inset-0 pointer-events-none opacity-80 mix-blend-multiply">
+            <Image
+              src="/images/tree-bg.jpg"
+              alt="Tree Background"
+              fill
+              priority
+              quality={60}
+              className="object-cover object-center"
+            />
+          </div>
 
           <div
             style={{
@@ -475,6 +477,11 @@ export function FamilyTreePage() {
                     onAddSpouse={() => {
                       setAddTarget(node.person);
                       setAddRelType('spouse');
+                      setAddDialogOpen(true);
+                    }}
+                    onAddSibling={() => {
+                      setAddTarget(node.person);
+                      setAddRelType('sibling');
                       setAddDialogOpen(true);
                     }}
                     onEdit={() => {

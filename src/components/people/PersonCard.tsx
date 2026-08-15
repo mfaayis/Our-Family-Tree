@@ -12,6 +12,7 @@ interface PersonCardProps {
   compact?: boolean;
   onAddChild?: () => void;
   onAddSpouse?: () => void;
+  onAddSibling?: () => void;
   onEdit?: () => void;
   showQuickActions?: boolean;
 }
@@ -23,6 +24,7 @@ export function PersonCard({
   compact = false,
   onAddChild,
   onAddSpouse,
+  onAddSibling,
   onEdit,
   showQuickActions = false,
 }: PersonCardProps) {
@@ -66,9 +68,9 @@ export function PersonCard({
       onKeyDown={e => e.key === 'Enter' && handleClick()}
       aria-label={`View profile of ${person.fullName}`}
     >
-      {/* Quick Action Buttons (Hover) */}
+      {/* Quick Action Buttons - Visible on hover or touch */}
       {showQuickActions && !isPlaceholder && (
-        <div className="absolute -top-3 -right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+        <div className="absolute -top-3 -right-3 flex gap-1 opacity-60 hover:opacity-100 focus-within:opacity-100 group-hover:opacity-100 transition-opacity duration-200 z-10">
           {onEdit && (
             <button
               onClick={e => { e.stopPropagation(); onEdit(); }}
@@ -85,6 +87,15 @@ export function PersonCard({
               title="Add Spouse"
             >
               <Heart className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onAddSibling && (
+            <button
+              onClick={e => { e.stopPropagation(); onAddSibling(); }}
+              className="bg-[#fffdf5] hover:bg-[#f4ebd8] text-[#8b5a2b] border border-[#8b5a2b]/30 shadow-sm rounded-full p-1.5 transition-colors"
+              title="Add Sibling"
+            >
+              <Users className="w-3.5 h-3.5" />
             </button>
           )}
           {onAddChild && (
